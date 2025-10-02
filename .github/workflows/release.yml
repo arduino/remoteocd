@@ -1,0 +1,197 @@
+name: Release remoteocd
+
+on:
+  push:
+    tags:
+      - "*" # Trigger on all tags
+
+env:
+  GO_VERSION: "1.25.1"
+  PROJECT_NAME: "remoteocd"
+  GITHUB_TOKEN: ${{ secrets.ARDUINOBOT_TOKEN }}
+  GITHUB_USERNAME: ArduinoBot
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [linux, darwin]
+        arch: [amd64, arm64]
+        ext: [""]
+        include:
+          - os: windows
+            arch: amd64
+            ext: .exe
+          - os: windows
+            arch: arm64
+            ext: .exe
+
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Extract version
+        shell: bash
+        run: |
+          TAG_NAME="${GITHUB_REF##*/}"
+          VERSION="${TAG_NAME#remoteocd-}" # Remove 'remoteocd-' prefix
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "PACKAGE_NAME=${{ env.PROJECT_NAME }}-${VERSION}-${{ matrix.os }}-${{ matrix.arch }}" >> $GITHUB_ENV
+          echo "BINARY_NAME=${{ env.PROJECT_NAME }}${{ matrix.ext }}" >> $GITHUB_ENV
+        env:
+          GITHUB_REF: ${{ github.ref }}
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Build Binary
+        env:
+          GOARCH: ${{ matrix.arch }}
+          GOOS: ${{ matrix.os }}
+        run: |
+          mkdir -p ./build/${{ env.PACKAGE_NAME }}
+          go build -v -ldflags "-X 'main.Version=${{ env.VERSION }}'" \
+            -o ../build/${{ env.PACKAGE_NAME }}/${{ env.BINARY_NAME}}\
+            .
+
+      - name: Prepare Build Artifacts [windows]
+        if: ${{ matrix.os == 'windows' }}
+        run: |
+          cd build \
+            && zip -r ./${{ env.PACKAGE_NAME }}.zip ${{ env.PACKAGE_NAME }} \
+            && rm -r ./${{ env.PACKAGE_NAME }}
+      - name: Prepare Build Artifacts [!windows]
+        if: ${{ matrix.os != 'windows' }}
+        run: |
+          tar -czf ./build/${{ env.PACKAGE_NAME}}.tar.gz -C ./build ${{ env.PACKAGE_NAME }}
+          rm -r ./build/${{ env.PACKAGE_NAME }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-${{ matrix.os }}-${{ matrix.arch }}
+          path: build/
+
+  generate-index:
+    needs: build
+    runs-on: ubuntu-22.04
+    environment: staging
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: binaries-*
+          merge-multiple: true
+          path: dist/
+
+      - name: Extract version
+        shell: bash
+        run: |
+          TAG_NAME="${GITHUB_REF##*/}"
+          VERSION="${TAG_NAME#remoteocd-}" # Remove 'remoteocd-' prefix
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+        env:
+          GITHUB_REF: ${{ github.ref }}
+
+      - name: Generate JSON index
+        shell: bash
+        env:
+          VERSION: ${{ env.VERSION }}
+          TOOL_NAME: remoteocd
+          BASE_URL: https://downloads.arduino.cc/tools
+        run: |
+          set -e
+
+          map_os_arch() {
+            case "$1" in
+              linux-amd64)
+                echo "x86_64-linux-gnu"
+                ;;
+              linux-arm64)
+                echo "aarch64-linux-gnu"
+                ;;
+              windows-amd64)
+                echo "x86_64-mingw32"
+                ;;
+              windows-arm64)
+                echo "arm64-mingw32"
+                ;;
+              darwin-amd64)
+                echo "x86_64-apple-darwin"
+                ;;
+              darwin-arm64)
+                echo "arm64-apple-darwin"
+                ;;
+              *)
+                echo "Unknown os-arch: $os_arch"
+                ;;
+            esac
+          }
+
+          systems="[]"
+
+          for file in dist/*; do
+            filename=$(basename "$file")
+
+            # Remove prefix and suffix to get host
+            basename_no_prefix=${filename#"${TOOL_NAME}-${VERSION}-"}
+            os_arch=${basename_no_prefix%.tar.gz}
+            os_arch=${os_arch%.zip}
+            host=$(map_os_arch "$os_arch")
+
+            checksum=$(sha256sum "$file" | awk '{print $1}')
+            size=$(stat --format="%s" "$file")
+            url="${BASE_URL}/${filename}"
+
+            system_entry=$(jq -n \
+              --arg host "$host" \
+              --arg url "$url" \
+              --arg archiveFileName "$filename" \
+              --arg checksum "SHA-256:$checksum" \
+              --argjson size "$size" \
+              '{
+                host: $host,
+                url: $url,
+                archiveFileName: $archiveFileName,
+                checksum: $checksum,
+                size: $size
+              }')
+
+            systems=$(echo "$systems" | jq --argjson entry "$system_entry" '. + [$entry]')
+          done
+
+          jq -n \
+            --arg name "$TOOL_NAME" \
+            --arg version "$VERSION" \
+            --argjson systems "$systems" \
+            '{
+              name: $name,
+              version: $version,
+              systems: $systems
+            }' > tool_index.json
+
+      - name: Upload artifacts index
+        uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+          prerelease: true
+          artifacts: tool_index.json,dist/*
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: "us-east-1"
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          role-session-name: "GHA_to_AWS_via_OIDC_for_orchestrator"
+      - name: Upload to S3
+        run: |
+          aws s3 sync dist/ s3://${{ secrets.AWS_BUCKET }}/tools/
