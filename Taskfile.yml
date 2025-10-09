@@ -1,0 +1,8 @@
+version: "3"
+
+tasks:
+  go:add-license-headers:
+    desc: Add missing go license headers
+    cmds:
+      - go install github.com/google/addlicense@v1.2.0
+      - addlicense -c "ARDUINO SA (http://www.arduino.cc/)" -f ./license_header.tpl $(find . -name "*.go" -type f -print0 | xargs -0)
