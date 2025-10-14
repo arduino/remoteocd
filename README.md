@@ -11,6 +11,19 @@ This tool acts as a versatile wrapper for OpenOCD (Open On-Chip Debugger), allow
 
 `remoteocd` is part of the `arduino:zephyr:unoq` platform.
 
+### Uploading with remoteocd 
+Uploading the compiled binary to the microcontroller is handled by remoteocd. Instead of relying on hard-coded flash commands, it accepts an OpenOCD configuration file. This allows you to tailor the upload script to specific debugging or flashing requirements.
+[ArduinoCore-Zephyr](https://github.com/arduino/ArduinoCore-zephyr) automatically installs remoteocd into the Arduino tools folder during setup.
+
+To upload your compiled sketch, use the following Arduino CLI command:
+
+```bash
+arduino-cli compile -b arduino:zephyr:unoq
+
+arduino-cli upload -b arduino:zephyr:unoq
+```
+
 ## License
 
 This project is licensed under the GPL3 license. See the LICENSE file for details.
+
