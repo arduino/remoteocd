@@ -1,4 +1,5 @@
 build/
+.bin/
 
 # Mac system files
 .DS_Store
