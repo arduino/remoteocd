@@ -17,7 +17,9 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
+	"io"
 	"path"
 	"strings"
 
@@ -29,6 +31,8 @@ import (
 
 const binaryDir = "/tmp/remoteocd/"
 const binaryName = "sketch.elf-zsk.bin"
+
+const binaryHashDir = "/var/tmp/remoteocd/"
 
 func flash(ctx context.Context, cmder board.Boarder, binary *paths.Path, files []*paths.Path) error {
 	err := cmder.MkDirAll(ctx, binaryDir)
@@ -53,6 +57,10 @@ func flash(ctx context.Context, cmder board.Boarder, binary *paths.Path, files [
 	err = cmder.Run(ctx, args...)
 	if err != nil {
 		return fmt.Errorf("error running OpenOCD: %w", err)
+	}
+
+	if err = pushHash(ctx, cmder, binary); err != nil {
+		feedback.Printf("warning: failed to push binary hash: %v", err)
 	}
 
 	return nil
@@ -81,6 +89,41 @@ func pushFiles(ctx context.Context, cmder board.Boarder, files []*paths.Path) ([
 	}
 
 	return remoteFiles, nil
+}
+
+func pushHash(ctx context.Context, cmder board.Boarder, binary *paths.Path) error {
+	fmt.Printf("Calculating hash for binary %q", binary)
+	binaryName := binary.Base()
+	f, err := binary.Open()
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	binaryHashName := binaryName + ".sha256"
+	tmp, err := paths.MkTempFile(nil, binaryHashName)
+	if err != nil {
+		return err
+	}
+	defer tmp.Close()
+
+	hash := sha256.New()
+	_, err = io.Copy(hash, f)
+	if err != nil {
+		return err
+	}
+	_ = f.Close()
+	_, err = tmp.Write(hash.Sum(nil))
+	if err != nil {
+		return err
+	}
+	_ = tmp.Close()
+
+	destination := path.Join(binaryHashDir, binaryHashName)
+	if err := cmder.MkDirAll(ctx, binaryHashDir); err != nil {
+		return err
+	}
+	return cmder.CopyTo(ctx, tmp.Name(), destination)
 }
 
 const openOCDPath = "/opt/openocd"
