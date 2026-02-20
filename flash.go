@@ -169,41 +169,6 @@ func pushFiles(ctx context.Context, cmder board.Boarder, files []*paths.Path) ([
 	return remoteFiles, nil
 }
 
-// func pushHash(ctx context.Context, cmder board.Boarder, binary *paths.Path) error {
-// 	fmt.Printf("Calculating hash for binary %q", binary)
-// 	binaryName := binary.Base()
-// 	f, err := binary.Open()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer f.Close()
-
-// 	binaryHashName := binaryName + ".sha256"
-// 	tmp, err := paths.MkTempFile(nil, binaryHashName)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer tmp.Close()
-
-// 	hash := sha256.New()
-// 	_, err = io.Copy(hash, f)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	_ = f.Close()
-// 	_, err = tmp.Write(hash.Sum(nil))
-// 	if err != nil {
-// 		return err
-// 	}
-// 	_ = tmp.Close()
-
-// 	destination := path.Join(binaryHashDir, binaryHashName)
-// 	if err := cmder.MkDirAll(ctx, binaryHashDir); err != nil {
-// 		return err
-// 	}
-// 	return cmder.CopyTo(ctx, tmp.Name(), destination)
-// }
-
 const openOCDPath = "/opt/openocd"
 const openOCDBin = openOCDPath + "/bin/openocd"
 
