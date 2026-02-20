@@ -30,8 +30,7 @@ jobs:
       - name: Extract version
         shell: bash
         run: |
-          TAG_NAME="${GITHUB_REF##*/}"
-          VERSION="${TAG_NAME#remoteocd-}" # Remove 'remoteocd-' prefix
+          VERSION="${GITHUB_REF##*/}"
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
           echo "PACKAGE_NAME=${{ env.PROJECT_NAME }}-${VERSION}-${{ matrix.os }}-${{ matrix.arch }}" >> $GITHUB_ENV
           echo "BINARY_NAME=${{ env.PROJECT_NAME }}${{ matrix.ext }}" >> $GITHUB_ENV
@@ -185,7 +184,7 @@ jobs:
           prerelease: true
           artifacts: tool_index.json,dist/*
 
-    # SKIP: enable again after testing
+     # SKIP: enable again after testing
     #   - name: Configure AWS credentials
     #     uses: aws-actions/configure-aws-credentials@v4
     #     with:
