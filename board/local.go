@@ -46,3 +46,8 @@ func (l *LocalCmd) CopyTo(_ context.Context, src, dst string) error {
 func (l *LocalCmd) MkDirAll(_ context.Context, path string) error {
 	return paths.New(path).MkdirAll()
 }
+
+// PullFrom copies a file locally
+func (l *LocalCmd) PullFrom(_ context.Context, src, dst string) error {
+	return paths.New(src).CopyTo(paths.New(dst))
+}

@@ -27,6 +27,7 @@ import (
 type Boarder interface {
 	Run(ctx context.Context, args ...string) error
 	CopyTo(ctx context.Context, src, dst string) error
+	PullFrom(ctx context.Context, src, dst string) error
 	MkDirAll(ctx context.Context, path string) error
 }
 

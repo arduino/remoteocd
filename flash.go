@@ -18,8 +18,10 @@ package main
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
+	"os"
 	"path"
 	"strings"
 
@@ -32,10 +34,24 @@ import (
 const binaryDir = "/tmp/remoteocd/"
 const binaryName = "sketch.elf-zsk.bin"
 
-const binaryHashDir = "/var/tmp/remoteocd/"
+const stateDir = "/var/tmp/remoteocd/"
+const stateFile = "last_flash_state.sha256"
 
 func flash(ctx context.Context, cmder board.Boarder, binary *paths.Path, files []*paths.Path) error {
-	err := cmder.MkDirAll(ctx, binaryDir)
+	// Compute current state hash
+	stateHash, err := computeFlashStateHash(binary, files)
+	if err != nil {
+		return fmt.Errorf("failed to compute flash state hash: %w", err)
+	}
+
+	// Pull last state hash from board
+	lastHash, err := pullLastFlashStateHash(ctx, cmder)
+	if err == nil && lastHash == stateHash {
+		feedback.Logf("Skipping flash: binary and config files unchanged (hash: %s)", stateHash)
+		return nil
+	}
+
+	err = cmder.MkDirAll(ctx, binaryDir)
 	if err != nil {
 		return err
 	}
@@ -59,11 +75,70 @@ func flash(ctx context.Context, cmder board.Boarder, binary *paths.Path, files [
 		return fmt.Errorf("error running OpenOCD: %w", err)
 	}
 
-	if err = pushHash(ctx, cmder, binary); err != nil {
-		feedback.Printf("warning: failed to push binary hash: %v", err)
+	// Save new state hash to board
+	if err = pushFlashStateHash(ctx, cmder, stateHash); err != nil {
+		feedback.Printf("warning: failed to push flash state hash: %v", err)
 	}
 
 	return nil
+}
+
+// computeFlashStateHash computes a hash of the binary and config file names and contents
+func computeFlashStateHash(binary *paths.Path, files []*paths.Path) (string, error) {
+	h := sha256.New()
+	// Binary name
+	h.Write([]byte(binary.Base()))
+	// Binary content
+	f, err := binary.Open()
+	if err != nil {
+		return "", err
+	}
+	if _, err := io.Copy(h, f); err != nil {
+		f.Close()
+		return "", err
+	}
+	f.Close()
+	// Config files: name and content
+	for _, file := range files {
+		h.Write([]byte(file.Base()))
+		f, err := file.Open()
+		if err != nil {
+			return "", err
+		}
+		if _, err := io.Copy(h, f); err != nil {
+			f.Close()
+			return "", err
+		}
+		f.Close()
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// pullLastFlashStateHash tries to pull the last flash state hash from the board
+func pullLastFlashStateHash(ctx context.Context, cmder board.Boarder) (string, error) {
+	localTmp := path.Join(os.TempDir(), stateFile)
+	remote := path.Join(stateDir, stateFile)
+	if err := cmder.PullFrom(ctx, remote, localTmp); err != nil {
+		return "", err
+	}
+	data, err := os.ReadFile(localTmp)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+// pushFlashStateHash saves the new state hash to the board
+func pushFlashStateHash(ctx context.Context, cmder board.Boarder, hash string) error {
+	localTmp := path.Join(os.TempDir(), stateFile)
+	if err := os.WriteFile(localTmp, []byte(hash), 0644); err != nil {
+		return err
+	}
+	remote := path.Join(stateDir, stateFile)
+	if err := cmder.MkDirAll(ctx, stateDir); err != nil {
+		return err
+	}
+	return cmder.CopyTo(ctx, localTmp, remote)
 }
 
 func pushBinary(ctx context.Context, cmder board.Boarder, binary *paths.Path) (string, error) {
