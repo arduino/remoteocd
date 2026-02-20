@@ -78,7 +78,7 @@ func flash(ctx context.Context, cmder board.Boarder, binary *paths.Path, files [
 	if err != nil {
 		feedback.Printf("warning: failed to push flash state hash: %v", err)
 	}
-	feedback.Printf("State hash file saved correclty into %v", destHashFile)
+	feedback.Printf("State hash file saved correctly into %v", destHashFile)
 
 	return nil
 }
