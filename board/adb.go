@@ -73,7 +73,6 @@ func (a *ADBCmd) MkDirAll(ctx context.Context, path string) error {
 	return nil
 }
 
-// PullFrom copies a file from the board to the local system using adb pull
 func (a *ADBCmd) PullFrom(ctx context.Context, src, dst string) error {
 	p, err := paths.NewProcess(nil, a.ADBPath, "-s", a.Serial, "pull", src, dst)
 	if err != nil {

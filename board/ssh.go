@@ -104,7 +104,6 @@ func (c *SSHCmd) MkDirAll(ctx context.Context, path string) error {
 	return nil
 }
 
-// PullFrom copies a file from the board to the local system using SSH cat
 func (c *SSHCmd) PullFrom(ctx context.Context, src, dst string) error {
 	session, err := c.client.NewSession()
 	if err != nil {
