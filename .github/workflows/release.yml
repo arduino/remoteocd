@@ -54,7 +54,7 @@ jobs:
         run: |
           mkdir -p ./build/${{ env.PACKAGE_NAME }}
           go build -v -ldflags "-X 'main.Version=${{ env.VERSION }}'" \
-            -o ../build/${{ env.PACKAGE_NAME }}/${{ env.BINARY_NAME}}\
+            -o ./build/${{ env.PACKAGE_NAME }}/${{ env.BINARY_NAME}}\
             .
 
       - name: Prepare Build Artifacts [windows]
