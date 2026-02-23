@@ -28,7 +28,8 @@ import (
 	"github.com/arduino/remoteocd/feedback"
 )
 
-const Version = "0.0.0-dev"
+// Version is set at build time using -ldflags "-X 'main.Version=1.0.0'"
+var Version = "0.0.0-dev"
 
 func main() {
 	rootCmd := newRootCmd()
