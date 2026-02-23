@@ -45,7 +45,7 @@ func flash(ctx context.Context, cmder board.Boarder, binary *paths.Path, files [
 
 	lastHash, err := pullLastFlashStateHash(ctx, cmder)
 	if err == nil && lastHash == shaState {
-		feedback.Logf("Skipping upload: binary and config files unchanged (hash: %s)", shaState)
+		feedback.Printf("Skipping upload: binary and config files unchanged (hash: %s)", shaState)
 		return nil
 	}
 
