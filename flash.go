@@ -64,7 +64,7 @@ func flash(ctx context.Context, cmder board.Boarder, binary *paths.Path, files [
 	}
 
 	if lastHash == shaState {
-		feedback.Printf("Upload skipped: No upload needed because local and remote hashes are identica")
+		feedback.Printf("Upload skipped: No upload needed because local and remote hashes are identical")
 		return nil
 	}
 
