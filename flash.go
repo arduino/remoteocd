@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/arduino/go-paths-helper"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/arduino/remoteocd/board"
 	"github.com/arduino/remoteocd/feedback"
@@ -38,18 +39,36 @@ const stateDir = "/var/tmp/remoteocd/"
 const stateFile = "last_flash_state.sha256"
 
 func flash(ctx context.Context, cmder board.Boarder, binary *paths.Path, files []*paths.Path) error {
-	shaState, err := computeSha256(binary, files)
-	if err != nil {
-		return fmt.Errorf("failed to compute flash state hash: %w", err)
+	g := new(errgroup.Group)
+
+	var lastHash, shaState string
+	g.Go(func() error {
+		var err error
+		shaState, err = computeSha256(binary, files)
+		if err != nil {
+			return fmt.Errorf("error computing flash state hash: %w", err)
+		}
+		return err
+	})
+
+	g.Go(func() error {
+		var err error
+		lastHash, err = pullLastFlashStateHash(ctx, cmder)
+		if err != nil {
+			feedback.Printf("No previous flash state hash found: %v", err)
+		}
+		return nil
+	})
+	if err := g.Wait(); err != nil {
+		return err
 	}
 
-	lastHash, err := pullLastFlashStateHash(ctx, cmder)
-	if err == nil && lastHash == shaState {
-		feedback.Printf("Skipping upload: binary and config files unchanged (hash: %s)", shaState)
+	if lastHash == shaState {
+		feedback.Printf("Upload skipped: No upload needed because local and remote hashes are identica")
 		return nil
 	}
 
-	err = cmder.MkDirAll(ctx, binaryDir)
+	err := cmder.MkDirAll(ctx, binaryDir)
 	if err != nil {
 		return err
 	}
