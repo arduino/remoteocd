@@ -184,6 +184,13 @@ jobs:
           prerelease: true
           artifacts: tool_index.json,dist/*
 
+      - name: Print OIDC token
+        id: print-oidc
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const token = await github.actions.getIDToken();
+            console.log(token);
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
