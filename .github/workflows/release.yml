@@ -185,11 +185,11 @@ jobs:
           artifacts: tool_index.json,dist/*
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-region: "us-east-1"
           role-to-assume: ${{ secrets.AWS_ROLE }}
-          role-session-name: "GHA_to_AWS_via_OIDC_for_orchestrator"
+          role-session-name: "GHA_to_AWS_remoteocd"
 
       - name: Upload to S3
         run: |
