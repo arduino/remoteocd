@@ -79,7 +79,7 @@ jobs:
   generate-index:
     needs: build
     runs-on: ubuntu-22.04
-    environment: staging
+    environment: production
     permissions:
       id-token: write
       contents: write
