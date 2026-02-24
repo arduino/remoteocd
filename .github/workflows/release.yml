@@ -3,7 +3,7 @@ name: Release remoteocd
 on:
   push:
     tags:
-      - "*" # Trigger on all tags
+      - "[0-9]+.[0-9]+.[0-9]+*"
 
 env:
   PROJECT_NAME: "remoteocd"
@@ -30,8 +30,7 @@ jobs:
       - name: Extract version
         shell: bash
         run: |
-          TAG_NAME="${GITHUB_REF##*/}"
-          VERSION="${TAG_NAME#remoteocd-}" # Remove 'remoteocd-' prefix
+          VERSION="${GITHUB_REF##*/}"
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
           echo "PACKAGE_NAME=${{ env.PROJECT_NAME }}-${VERSION}-${{ matrix.os }}-${{ matrix.arch }}" >> $GITHUB_ENV
           echo "BINARY_NAME=${{ env.PROJECT_NAME }}${{ matrix.ext }}" >> $GITHUB_ENV
@@ -55,7 +54,7 @@ jobs:
         run: |
           mkdir -p ./build/${{ env.PACKAGE_NAME }}
           go build -v -ldflags "-X 'main.Version=${{ env.VERSION }}'" \
-            -o ../build/${{ env.PACKAGE_NAME }}/${{ env.BINARY_NAME}}\
+            -o ./build/${{ env.PACKAGE_NAME }}/${{ env.BINARY_NAME}}\
             .
 
       - name: Prepare Build Artifacts [windows]
@@ -64,6 +63,7 @@ jobs:
           cd build \
             && zip -r ./${{ env.PACKAGE_NAME }}.zip ${{ env.PACKAGE_NAME }} \
             && rm -r ./${{ env.PACKAGE_NAME }}
+
       - name: Prepare Build Artifacts [!windows]
         if: ${{ matrix.os != 'windows' }}
         run: |
@@ -79,7 +79,7 @@ jobs:
   generate-index:
     needs: build
     runs-on: ubuntu-22.04
-    environment: staging
+    environment: production
     permissions:
       id-token: write
       contents: write
@@ -94,8 +94,7 @@ jobs:
       - name: Extract version
         shell: bash
         run: |
-          TAG_NAME="${GITHUB_REF##*/}"
-          VERSION="${TAG_NAME#remoteocd-}" # Remove 'remoteocd-' prefix
+          VERSION="${GITHUB_REF##*/}"
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
         env:
           GITHUB_REF: ${{ github.ref }}
@@ -186,11 +185,12 @@ jobs:
           artifacts: tool_index.json,dist/*
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-region: "us-east-1"
           role-to-assume: ${{ secrets.AWS_ROLE }}
-          role-session-name: "GHA_to_AWS_via_OIDC_for_orchestrator"
+          role-session-name: "GHA_to_AWS_remoteocd"
+
       - name: Upload to S3
         run: |
           aws s3 sync dist/ s3://${{ secrets.AWS_BUCKET }}/tools/
