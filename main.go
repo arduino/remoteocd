@@ -78,6 +78,7 @@ func newUploadCmd() *cobra.Command {
 	var password string
 	var address string
 	var files []string
+	var force bool
 	upload := &cobra.Command{
 		Use:   "upload <binary>",
 		Args:  cobra.ExactArgs(1),
@@ -120,7 +121,7 @@ func newUploadCmd() *cobra.Command {
 				}
 			}
 
-			return flash(cmd.Context(), cmder, binaryPath, filesPaths)
+			return flash(cmd.Context(), cmder, binaryPath, filesPaths, force)
 		},
 	}
 	upload.Flags().StringVar(&adbPath, "adb-path", "", "Path to adb binary, if not set it will try to find it")
@@ -128,6 +129,7 @@ func newUploadCmd() *cobra.Command {
 	upload.Flags().StringVarP(&address, "address", "a", "", "SSH address of the remote host")
 	upload.Flags().StringVarP(&password, "password", "p", "", "Password for the SSH connection")
 	upload.Flags().StringArrayVarP(&files, "file", "f", []string{}, "openocd configuration files to use")
+	upload.Flags().BoolVar(&force, "force", false, "If true, force the upload without checking the hash")
 
 	return upload
 }
