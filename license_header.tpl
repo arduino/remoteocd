@@ -1,6 +1,6 @@
 This file is part of remoteocd.
 
-Copyright{{ if .Year }} {{.Year}}{{ end }} {{.Holder}}
+Copyright (C) {{.Holder}}
 
 This software is released under the GNU General Public License version 3,
 which covers the main part of remoteocd.
