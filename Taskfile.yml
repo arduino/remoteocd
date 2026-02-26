@@ -53,6 +53,18 @@ tasks:
     cmds:
       - ${PWD}/.bin/dprint check
 
+
+  release:
+    desc: Create a tag on the current commit and push it to the remote to trigger the release github workflow
+    cmds:
+      - |
+          if [ -z "{{.CLI_ARGS}}" ]; then
+            echo "Error: Version argument is required. Usage: task release -- <version>"
+            exit 1
+          fi
+      - git tag -a "{{.CLI_ARGS}}" -m "Release {{.CLI_ARGS}}"
+      - git push origin "{{.CLI_ARGS}}"
+
   # Source: https://github.com/arduino/tooling-project-assets/blob/main/workflow-templates/assets/check-dependencies-task/Taskfile.yml
   general:cache-dep-licenses:
     desc: Cache dependency license metadata
