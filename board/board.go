@@ -16,9 +16,10 @@
 package board
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"os"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -30,11 +31,40 @@ type Boarder interface {
 	MkDirAll(ctx context.Context, path string) error
 }
 
+var knownBoards = []string{"arduino,imola", "arduino,monza", "arduino"}
+
 var OnBoard = sync.OnceValue(func() bool {
-	var boardNames = []string{"UNO Q\n", "Imola\n", "Inc. Robotics RB1\n"}
-	buf, err := os.ReadFile("/sys/class/dmi/id/product_name")
-	if err == nil && slices.Contains(boardNames, string(buf)) {
-		return true
+	trimAndLower := func(s []byte) []byte {
+		return bytes.ToLower(bytes.Trim(s, " \n\t\r\x00"))
+	}
+
+	readFile := func(path string) ([]byte, error) {
+		f, err := os.Open(path)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+		return io.ReadAll(f)
+	}
+
+	// legay check for imola
+	if buf, err := readFile("/sys/class/dmi/id/product_name"); err == nil {
+		return string(trimAndLower(buf)) == "imola"
+	}
+
+	var compatibles []string
+	if buf, err := readFile("/sys/firmware/devicetree/base/compatible"); err == nil {
+		for _, compatible := range bytes.Split(buf, []byte{'\x00'}) {
+			compatibles = append(compatibles, string(trimAndLower(compatible)))
+		}
+	}
+
+	for _, knownBoard := range knownBoards {
+		for _, compatible := range compatibles {
+			if strings.HasPrefix(compatible, knownBoard) {
+				return true
+			}
+		}
 	}
 	return false
 })()
