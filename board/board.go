@@ -52,27 +52,18 @@ var OnBoard = sync.OnceValue(func() bool {
 		return string(trimAndLower(buf)) == "imola"
 	}
 
-	var compatibles []string
 	if buf, err := readFile("/sys/firmware/devicetree/base/compatible"); err == nil {
-if buf, err := readFile("/sys/firmware/devicetree/base/compatible"); err == nil {
-	for _, raw := range bytes.Split(buf, []byte{'\x00'}) {
-		compatible := string(trimAndLower(raw))
+		for _, raw := range bytes.Split(buf, []byte{'\x00'}) {
+			compatible := string(trimAndLower(raw))
 
-		for _, knownBoard := range knownBoards {
-			if strings.HasPrefix(compatible, knownBoard) {
-				return true
+			for _, knownBoard := range knownBoards {
+				if strings.HasPrefix(compatible, knownBoard) {
+					return true
+				}
 			}
 		}
 	}
-}
 
-	for _, knownBoard := range knownBoards {
-		for _, compatible := range compatibles {
-			if strings.HasPrefix(compatible, knownBoard) {
-				return true
-			}
-		}
-	}
 	return false
 })()
 
