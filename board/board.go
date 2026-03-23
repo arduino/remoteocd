@@ -47,7 +47,7 @@ var OnBoard = sync.OnceValue(func() bool {
 		return io.ReadAll(f)
 	}
 
-	// legay check for imola
+	// legacy check for imola
 	if buf, err := readFile("/sys/class/dmi/id/product_name"); err == nil {
 		return string(trimAndLower(buf)) == "imola"
 	}
