@@ -28,9 +28,8 @@ import (
 )
 
 const binaryDir = "/tmp/remoteocd/"
-const binaryName = "sketch.elf-zsk.bin"
 
-func flash(ctx context.Context, cmder board.Boarder, binary *paths.Path, files []*paths.Path) error {
+func flash(ctx context.Context, cmder board.Boarder, binary *paths.Path, loader *paths.Path, files []*paths.Path) error {
 	err := cmder.MkDirAll(ctx, binaryDir)
 	if err != nil {
 		return err
@@ -42,13 +41,19 @@ func flash(ctx context.Context, cmder board.Boarder, binary *paths.Path, files [
 		return err
 	}
 
+	feedback.Logf("Pushing loader %q", loader)
+	remoteLoader, err := pushBinary(ctx, cmder, loader)
+	if err != nil {
+		return err
+	}
+
 	feedback.Logf("Pushing config files: %v", files)
 	remoteFiles, err := pushFiles(ctx, cmder, files)
 	if err != nil {
 		return err
 	}
 
-	args := makeOpenOCDCmd(remoteBinary, remoteFiles...)
+	args := makeOpenOCDCmd(remoteBinary, remoteLoader, remoteFiles...)
 	feedback.Logf("Running command: %s", strings.Join(args, " "))
 	err = cmder.Run(ctx, args...)
 	if err != nil {
@@ -59,7 +64,7 @@ func flash(ctx context.Context, cmder board.Boarder, binary *paths.Path, files [
 }
 
 func pushBinary(ctx context.Context, cmder board.Boarder, binary *paths.Path) (string, error) {
-	destination := path.Join(binaryDir, binaryName)
+	destination := path.Join(binaryDir, binary.String())
 
 	if err := cmder.CopyTo(ctx, binary.String(), destination); err != nil {
 		return "", err
@@ -86,13 +91,14 @@ func pushFiles(ctx context.Context, cmder board.Boarder, files []*paths.Path) ([
 const openOCDPath = "/opt/openocd"
 const openOCDBin = openOCDPath + "/bin/openocd"
 
-func makeOpenOCDCmd(binary string, files ...string) []string {
+func makeOpenOCDCmd(binary string, loader string, files ...string) []string {
 	args := []string{
 		openOCDBin, "-d2",
 		"-s", openOCDPath,
 		"-s", openOCDPath + "/share/openocd/scripts",
 		"-f", "openocd_gpiod.cfg",
 		"-c", "set filename " + binary,
+		"-c", "set loader " + loader,
 	}
 	for _, file := range files {
 		args = append(args, "-f", file)
