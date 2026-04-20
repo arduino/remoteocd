@@ -79,26 +79,26 @@ func newUploadCmd() *cobra.Command {
 	var address string
 	var files []string
 	upload := &cobra.Command{
-		Use:   "upload <binary> <loader>",
-		Args:  cobra.ExactArgs(2),
+		Use:   "upload <binary>...",
+		Args:  cobra.MinimumNArgs(1),
 		Short: "Run a recipe for a specific board",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			binaryPath := paths.New(args[0])
-			if !binaryPath.Exist() {
-				return fmt.Errorf("file %q does not exist", binaryPath.String())
-			}
-			loaderPath := paths.New(args[1])
-			if !loaderPath.Exist() {
-				return fmt.Errorf("file %q does not exist", loaderPath.String())
+			binaries := make(paths.PathList, 0, len(args))
+			for _, arg := range args {
+				binaryPath := paths.New(arg)
+				if !binaryPath.Exist() {
+					return fmt.Errorf("file %q does not exist", binaryPath.String())
+				}
+				binaries.Add(binaryPath)
 			}
 
-			var filesPaths paths.PathList
+			configs := make(paths.PathList, 0, len(files))
 			for _, f := range files {
 				p := paths.New(f)
 				if !p.Exist() {
 					return fmt.Errorf("openocd configuration file %q does not exist", f)
 				}
-				filesPaths = append(filesPaths, p)
+				configs.Add(p)
 			}
 
 			cmd.SilenceUsage = true // Do not print usage on error.
@@ -124,7 +124,7 @@ func newUploadCmd() *cobra.Command {
 				}
 			}
 
-			return flash(cmd.Context(), cmder, binaryPath, loaderPath, filesPaths)
+			return flash(cmd.Context(), cmder, binaries, configs)
 		},
 	}
 	upload.Flags().StringVar(&adbPath, "adb-path", "", "Path to adb binary, if not set it will try to find it")
