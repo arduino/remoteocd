@@ -182,6 +182,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
           prerelease: true
+          allowUpdates: true
           artifacts: tool_index.json,dist/*
 
       - name: Configure AWS credentials
