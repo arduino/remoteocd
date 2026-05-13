@@ -12,6 +12,7 @@ tasks:
       - install:linter
       - install:goimports
       - install:dprint
+      - install:reuse
 
   install:linter:
     cmds:
@@ -26,11 +27,19 @@ tasks:
       - curl -fsSL https://dprint.dev/install.sh | sh -s {{ .DPRINT_VERSION }}
       - mkdir -p .bin && cp $HOME/.dprint/bin/dprint .bin/dprint # workaround for local install
 
-  go:add-license-headers:
-    desc: Add missing go license headers
+  install:reuse:
     cmds:
-      - go install github.com/google/addlicense@v1.2.0
-      - addlicense -c "ARDUINO SA (http://www.arduino.cc/)" -f ./license_header.tpl $(find . -name "*.go" -type f -print0 | xargs -0)
+      - uv tool install reuse
+
+  license:check:
+    desc: Check license headers in Go files
+    cmds:
+      - uvx reuse lint
+
+  license:update:
+    desc: Update license headers in Go files
+    cmds:
+      - uvx reuse annotate --template remoteocd --exclude-year --copyright "Arduino s.r.l. and/or its affiliated companies"  --license GPL-3.0-or-later -r  $(find . -name "*.go" -type f -print0 | xargs -0)
 
   test:
     desc: Run go tests
