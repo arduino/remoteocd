@@ -38,12 +38,12 @@ jobs:
           GITHUB_REF: ${{ github.ref }}
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
 
@@ -182,6 +182,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
           prerelease: true
+          allowUpdates: true
           artifacts: tool_index.json,dist/*
 
       - name: Configure AWS credentials
