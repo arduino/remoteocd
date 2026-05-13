@@ -1,6 +1,5 @@
-// This file is part of arduino-flasher-cli.
+// This file is part of remoteocd.
 //
-// Copyright 2025 ARDUINO SA (http://www.arduino.cc/)
 // SPDX-FileCopyrightText: Arduino s.r.l. and/or its affiliated companies
 // SPDX-License-Identifier: GPL-3.0-or-later
 
