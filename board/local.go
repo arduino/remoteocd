@@ -33,6 +33,14 @@ func (l *LocalCmd) CopyTo(_ context.Context, src, dst string) error {
 	return paths.New(src).CopyTo(paths.New(dst))
 }
 
-func (l *LocalCmd) MkDirAll(_ context.Context, path string) error {
-	return paths.New(path).MkdirAll()
+func (l *LocalCmd) MkTempDir(_ context.Context) (string, error) {
+	dir, err := paths.MkTempDir("/tmp", "remoteocd-")
+	if err != nil {
+		return "", err
+	}
+	return dir.String(), nil
+}
+
+func (l *LocalCmd) RemoveAll(_ context.Context, path string) error {
+	return paths.New(path).RemoveAll()
 }

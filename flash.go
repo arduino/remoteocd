@@ -17,22 +17,26 @@ import (
 	"github.com/arduino/remoteocd/feedback"
 )
 
-const binaryDir = "/tmp/remoteocd/"
-
 func flash(ctx context.Context, cmder board.Boarder, binaries paths.PathList, configs paths.PathList) error {
-	err := cmder.MkDirAll(ctx, binaryDir)
+	binaryDir, err := cmder.MkTempDir(ctx)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		// Without cancel: cleanup must run also after an interrupt.
+		if err := cmder.RemoveAll(context.WithoutCancel(ctx), binaryDir); err != nil {
+			feedback.Logf("Failed to remove %s: %v", binaryDir, err)
+		}
+	}()
 
 	feedback.Logf("Pushing binary: %v", binaries)
-	remoteBinaries, err := pushFiles(ctx, cmder, binaries)
+	remoteBinaries, err := pushFiles(ctx, cmder, binaryDir, binaries)
 	if err != nil {
 		return err
 	}
 
 	feedback.Logf("Pushing config files: %v", configs)
-	remoteConfigs, err := pushFiles(ctx, cmder, configs)
+	remoteConfigs, err := pushFiles(ctx, cmder, binaryDir, configs)
 	if err != nil {
 		return err
 	}
@@ -47,7 +51,7 @@ func flash(ctx context.Context, cmder board.Boarder, binaries paths.PathList, co
 	return nil
 }
 
-func pushFiles(ctx context.Context, cmder board.Boarder, files []*paths.Path) ([]string, error) {
+func pushFiles(ctx context.Context, cmder board.Boarder, binaryDir string, files []*paths.Path) ([]string, error) {
 	remoteFiles := make([]string, 0, len(files))
 	for _, file := range files {
 		destination := path.Join(binaryDir, file.Base())

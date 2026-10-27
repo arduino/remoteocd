@@ -8,6 +8,7 @@ package board
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/arduino/go-paths-helper"
 
@@ -51,14 +52,26 @@ func (a *ADBCmd) CopyTo(ctx context.Context, src, dst string) error {
 	return nil
 }
 
-func (a *ADBCmd) MkDirAll(ctx context.Context, path string) error {
-	p, err := paths.NewProcess(nil, a.ADBPath, "-s", a.Serial, "shell", "mkdir", "-p", path)
+func (a *ADBCmd) MkTempDir(ctx context.Context) (string, error) {
+	p, err := paths.NewProcess(nil, a.ADBPath, "-s", a.Serial, "shell", "mktemp", "-d", "/tmp/remoteocd-XXXXXX")
+	if err != nil {
+		return "", err
+	}
+	stdout, stderr, err := p.RunAndCaptureOutput(ctx)
+	if err != nil {
+		return "", fmt.Errorf("make temp dir error: %w: %s", err, stderr)
+	}
+	return strings.TrimSpace(string(stdout)), nil
+}
+
+func (a *ADBCmd) RemoveAll(ctx context.Context, path string) error {
+	p, err := paths.NewProcess(nil, a.ADBPath, "-s", a.Serial, "shell", "rm", "-rf", path)
 	if err != nil {
 		return err
 	}
 	out, err := p.RunAndCaptureCombinedOutput(ctx)
 	if err != nil {
-		return fmt.Errorf("makedir error: %w: %s", err, out)
+		return fmt.Errorf("remove dir error: %w: %s", err, out)
 	}
 	return nil
 }
