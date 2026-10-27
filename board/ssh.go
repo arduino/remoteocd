@@ -81,15 +81,29 @@ func (c *SSHCmd) CopyTo(ctx context.Context, src, dst string) error {
 	return nil
 }
 
-func (c *SSHCmd) MkDirAll(ctx context.Context, path string) error {
+func (c *SSHCmd) MkTempDir(ctx context.Context) (string, error) {
+	session, err := c.client.NewSession()
+	if err != nil {
+		return "", err
+	}
+	defer session.Close()
+
+	out, err := session.Output("mktemp -d /tmp/remoteocd-XXXXXX")
+	if err != nil {
+		return "", fmt.Errorf("failed to make temp dir: %w", err)
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
+func (c *SSHCmd) RemoveAll(ctx context.Context, path string) error {
 	session, err := c.client.NewSession()
 	if err != nil {
 		return err
 	}
 	defer session.Close()
 
-	if err := session.Run(fmt.Sprintf("mkdir -p %s", path)); err != nil {
-		return fmt.Errorf("failt to make dir: %w", err)
+	if err := session.Run(fmt.Sprintf("rm -rf %s", path)); err != nil {
+		return fmt.Errorf("failed to remove dir: %w", err)
 	}
 	return nil
 }
