@@ -75,7 +75,7 @@ func (c *SSHCmd) CopyTo(ctx context.Context, src, dst string, mode fs.FileMode) 
 
 	session.Stdin = f
 
-	if err := session.Run(fmt.Sprintf("install -m %o /dev/stdin %s", mode, dst)); err != nil {
+	if err := session.Run(fmt.Sprintf("install -m %o /dev/stdin %s", mode, shellQuote(dst))); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -89,7 +89,7 @@ func (c *SSHCmd) MkDirAll(ctx context.Context, path string, mode fs.FileMode) er
 	}
 	defer session.Close()
 
-	if err := session.Run(fmt.Sprintf("install -d -m %o %s", mode, path)); err != nil {
+	if err := session.Run(fmt.Sprintf("install -d -m %o %s", mode, shellQuote(path))); err != nil {
 		return fmt.Errorf("failed to make dir: %w", err)
 	}
 	return nil

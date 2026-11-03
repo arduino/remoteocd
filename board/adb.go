@@ -49,11 +49,20 @@ func (a *ADBCmd) CopyTo(ctx context.Context, src, dst string, mode fs.FileMode) 
 	if err != nil {
 		return fmt.Errorf("copy files error: %w: %s", err, out)
 	}
-	return a.Run(ctx, "chmod", fmt.Sprintf("%o", mode), dst)
+
+	p, err = paths.NewProcess(nil, a.ADBPath, "-s", a.Serial, "shell", "chmod", fmt.Sprintf("%o", mode), shellQuote(dst))
+	if err != nil {
+		return err
+	}
+	out, err = p.RunAndCaptureCombinedOutput(ctx)
+	if err != nil {
+		return fmt.Errorf("chmod error: %w: %s", err, out)
+	}
+	return nil
 }
 
 func (a *ADBCmd) MkDirAll(ctx context.Context, path string, mode fs.FileMode) error {
-	p, err := paths.NewProcess(nil, a.ADBPath, "-s", a.Serial, "shell", "install", "-d", "-m", fmt.Sprintf("%o", mode), path)
+	p, err := paths.NewProcess(nil, a.ADBPath, "-s", a.Serial, "shell", "install", "-d", "-m", fmt.Sprintf("%o", mode), shellQuote(path))
 	if err != nil {
 		return err
 	}

@@ -70,3 +70,8 @@ func escapeArgs(args []string) []string {
 	}
 	return args
 }
+
+// shellQuote quotes s as one literal word for a POSIX shell.
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
+}
