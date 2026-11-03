@@ -8,6 +8,7 @@ package board
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"net"
 	"os"
 	"strings"
@@ -59,7 +60,7 @@ func (s *SSHCmd) Run(ctx context.Context, args ...string) error {
 	return session.Run(strings.Join(args, " "))
 }
 
-func (c *SSHCmd) CopyTo(ctx context.Context, src, dst string) error {
+func (c *SSHCmd) CopyTo(ctx context.Context, src, dst string, mode fs.FileMode) error {
 	session, err := c.client.NewSession()
 	if err != nil {
 		return err
@@ -74,22 +75,22 @@ func (c *SSHCmd) CopyTo(ctx context.Context, src, dst string) error {
 
 	session.Stdin = f
 
-	if err := session.Run(fmt.Sprintf("cat > %s", dst)); err != nil {
+	if err := session.Run(fmt.Sprintf("install -m %o /dev/stdin %s", mode, dst)); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
 	return nil
 }
 
-func (c *SSHCmd) MkDirAll(ctx context.Context, path string) error {
+func (c *SSHCmd) MkDirAll(ctx context.Context, path string, mode fs.FileMode) error {
 	session, err := c.client.NewSession()
 	if err != nil {
 		return err
 	}
 	defer session.Close()
 
-	if err := session.Run(fmt.Sprintf("mkdir -p %s", path)); err != nil {
-		return fmt.Errorf("failt to make dir: %w", err)
+	if err := session.Run(fmt.Sprintf("install -d -m %o %s", mode, path)); err != nil {
+		return fmt.Errorf("failed to make dir: %w", err)
 	}
 	return nil
 }

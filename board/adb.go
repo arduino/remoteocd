@@ -8,6 +8,7 @@ package board
 import (
 	"context"
 	"fmt"
+	"io/fs"
 
 	"github.com/arduino/go-paths-helper"
 
@@ -39,7 +40,7 @@ func (a *ADBCmd) Run(ctx context.Context, args ...string) error {
 	return cmd.RunWithinContext(ctx)
 }
 
-func (a *ADBCmd) CopyTo(ctx context.Context, src, dst string) error {
+func (a *ADBCmd) CopyTo(ctx context.Context, src, dst string, mode fs.FileMode) error {
 	p, err := paths.NewProcess(nil, a.ADBPath, "-s", a.Serial, "push", src, dst)
 	if err != nil {
 		return err
@@ -48,11 +49,11 @@ func (a *ADBCmd) CopyTo(ctx context.Context, src, dst string) error {
 	if err != nil {
 		return fmt.Errorf("copy files error: %w: %s", err, out)
 	}
-	return nil
+	return a.Run(ctx, "chmod", fmt.Sprintf("%o", mode), dst)
 }
 
-func (a *ADBCmd) MkDirAll(ctx context.Context, path string) error {
-	p, err := paths.NewProcess(nil, a.ADBPath, "-s", a.Serial, "shell", "mkdir", "-p", path)
+func (a *ADBCmd) MkDirAll(ctx context.Context, path string, mode fs.FileMode) error {
+	p, err := paths.NewProcess(nil, a.ADBPath, "-s", a.Serial, "shell", "install", "-d", "-m", fmt.Sprintf("%o", mode), path)
 	if err != nil {
 		return err
 	}

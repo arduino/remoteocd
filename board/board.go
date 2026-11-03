@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"io/fs"
 	"os"
 	"strconv"
 	"strings"
@@ -17,8 +18,10 @@ import (
 
 type Boarder interface {
 	Run(ctx context.Context, args ...string) error
-	CopyTo(ctx context.Context, src, dst string) error
-	MkDirAll(ctx context.Context, path string) error
+	// CopyTo copies src to dst with the permission mode. It replaces a dst of another user.
+	CopyTo(ctx context.Context, src, dst string, mode fs.FileMode) error
+	// MkDirAll makes path with the permission mode. It fails if path has another mode and another owner.
+	MkDirAll(ctx context.Context, path string, mode fs.FileMode) error
 }
 
 var knownBoards = []string{"arduino,imola", "arduino,monza", "arduino"}
