@@ -20,7 +20,7 @@ import (
 const binaryDir = "/tmp/remoteocd/"
 
 func flash(ctx context.Context, cmder board.Boarder, binaries paths.PathList, configs paths.PathList) error {
-	err := cmder.MkDirAll(ctx, binaryDir)
+	err := cmder.MkDirAll(ctx, binaryDir, 0o777)
 	if err != nil {
 		return err
 	}
@@ -52,7 +52,7 @@ func pushFiles(ctx context.Context, cmder board.Boarder, files []*paths.Path) ([
 	for _, file := range files {
 		destination := path.Join(binaryDir, file.Base())
 
-		if err := cmder.CopyTo(ctx, file.String(), destination); err != nil {
+		if err := cmder.CopyTo(ctx, file.String(), destination, 0o666); err != nil {
 			return nil, err
 		}
 
